@@ -11,28 +11,20 @@ import os
 import logging
 
 
-
-
 load_dotenv()
 
 bot = Bot(os.getenv('TOKEN'))
 dp = Dispatcher()
 
-
-# Создаем клавиатуру
 keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="📋 Мои задачи")],  # Одна кнопка в строке
+        [KeyboardButton(text="📋 Мои задачи")],  
     ],
-    resize_keyboard=True  # Подгоняем размер клавиатуры под экран
+    resize_keyboard=True  
 )
 
 
-
-# Словарь для хранения задач
 tasks = {}  # Формат: {id: {"text": str, "deadline": datetime, "created_at": datetime}}
-
-
 
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
@@ -55,12 +47,11 @@ async def start_handler(message: types.Message):
 Начни с добавления задачи, например:
 /add Купить молоко 25.10.2023 18:00 30
 """
-    await message.answer(welcome_text, reply_markup=keyboard)# Передаем клавиатуру
-
+    await message.answer(welcome_text, reply_markup=keyboard)
     
 @dp.message(F.text == "📋 Мои задачи")
 async def handle_tasks_button(message: Message):
-    # Вызываем функцию, которая показывает задачи
+    
     await list_tasks(message)
 
 @dp.message(Command("add"))
@@ -115,12 +106,10 @@ async def list_tasks(message: types.Message):
     task_list = []
     now = datetime.now()
     for task_id, task in tasks.items():
-        # Проверяем, что задача принадлежит текущему пользователю
         if task["user_id"] == message.from_user.id:
-            # Определяем статус задачи
-            if task.get("completed", False):  # Если задача выполнена
+            if task.get("completed", False):
                 status = "✅ Выполнено"
-            else:  # Если задача не выполнена
+            else: 
                 status = (
                     f"⏳ Осталось: {str(task['deadline'] - now)}"
                     if task["deadline"] > now
@@ -134,14 +123,9 @@ async def list_tasks(message: types.Message):
 @dp.message(Command("completed"))
 async def completed_task(message: types.Message):
     try:
-        # Получаем ID задачи из сообщения
-        task_id = int(message.text.split(" ")[1])  # Формат: /completed [id]
-
-        # Проверяем, существует ли задача с таким ID
+        task_id = int(message.text.split(" ")[1])  
         if task_id in tasks:
-            # Проверяем, что задача принадлежит текущему пользователю
             if tasks[task_id]["user_id"] == message.from_user.id:
-                # Отмечаем задачу как выполненную
                 tasks[task_id]["completed"] = True
                 await message.answer(f"✅ Задача с ID {task_id} отмечена как выполненная.")
             else:
@@ -149,7 +133,6 @@ async def completed_task(message: types.Message):
         else:
             await message.answer("❌ Задача с таким ID не найдена.")
     except (IndexError, ValueError):
-        # Если формат команды неверный
         await message.answer("❌ Используйте формат: /completed [id]")
     
     
@@ -158,7 +141,7 @@ async def completed_task(message: types.Message):
 @dp.message(Command("delete"))
 async def delete_task(message: types.Message):
     try:
-        task_id = int(message.text.split(" ")[1])  # Получаем ID задачи
+        task_id = int(message.text.split(" ")[1])  
         if task_id in tasks:
             del tasks[task_id]
             await message.answer(f"✅ Задача с ID {task_id} удалена.")
@@ -181,11 +164,7 @@ _Пример:_ `/add Позвонить маме 25.12.2023 18:00 30`
 /completed [ID] — отметить задачу как выполненную  
     """
     await message.answer(help_text, parse_mode=ParseMode.MARKDOWN)
-
-        
-
-
-
+    
 logging.basicConfig(level=logging.INFO)
 
 async def reminder_check():
@@ -198,28 +177,21 @@ async def reminder_check():
             for task_id, task in list(tasks.items()):
                 logging.info(f"Проверка задачи {task_id}: {task}")
                 logging.info(f"Дедлайн: {task['deadline']}, Напоминание: {task.get('reminder_time')}, Сейчас: {now}")
-                
-                # Проверка, что задача принадлежит пользователю и не выполнена
                 if task["user_id"] and not task.get("completed", False):
-                    # Уведомление о дедлайне
                     if task["deadline"] and task["deadline"] <= now:
                         logging.info(f"Отправка уведомления о дедлайне для задачи {task_id}")
                         await bot.send_message(
                             task["user_id"], f"🔔 Напоминание о задаче: {task['text']}"
                         )
-                        # Удаляем задачу после уведомления (если нужно)
                         del tasks[task_id]
                     
-                    # Уведомление о напоминании
                     elif task.get("reminder_time") and task["reminder_time"] <= now:
                         logging.info(f"Отправка напоминания для задачи {task_id}")
                         await bot.send_message(
                             task["user_id"], f"⏳ Не забудьте выполнить задачу: {task['text']}\nДедлайн: {task['deadline'].strftime('%d.%m.%Y %H:%M')}"
                         )
-                        # Отключаем напоминание после отправки
                         task["reminder_time"] = None
         
-        # Пауза между проверками
         await asyncio.sleep(10)
     
 
